@@ -1,0 +1,30 @@
+[package]
+name = "zeroize-test2"
+description = "fail-fast from build.rs if rustls-pki-types doesn't implement zeroize::Zeroize"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rustls-pki-types = { version = "=1.11.0", features = ["alloc", "std"] } #lacks zeroize
+#rustls-pki-types = {  git = "https://github.com/rustls/pki-types.git", rev="b59e08d49911b10c423d25bd9040cfbe5a6042ff", features = ["alloc", "std"] } #has zeroize
+zeroize = { version = "1.8", features = ["alloc"] }
+#zeroize = { version = "1.8", default-features = false, features = ["alloc"] }
+rustls-pemfile = "2.2"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1.0"
+
+[dev-dependencies]
+#zeroize = { version = "1.8", features = ["alloc"] }
+#zeroize = { version = "1.8", default-features = false, features = ["alloc"] }
+#rustls-pki-types = {  git = "https://github.com/rustls/pki-types.git", rev="b59e08d49911b10c423d25bd9040cfbe5a6042ff", features = ["alloc", "std"] }
+
+[build-dependencies]
+cargo_metadata = "0.18"
+anyhow = "1"
+#[patch-crates.io] #doesn't err
+#[patch.crates-io]
+#rustls-pki-types = { path="/home/user/SOURCE/github/pki-types" }
+
+#XXX: uncomment this to get the zeroize variant of pki-types; comment out to see build fail due to lack of it in 1.11.0
+[patch.crates-io]
+rustls-pki-types = { git = "https://github.com/rustls/pki-types.git", rev = "b59e08d49911b10c423d25bd9040cfbe5a6042ff" }
