@@ -19,7 +19,7 @@ anyhow = "1.0"
 #rustls-pki-types = {  git = "https://github.com/rustls/pki-types.git", rev="b59e08d49911b10c423d25bd9040cfbe5a6042ff", features = ["alloc", "std"] }
 
 [build-dependencies]
-cargo_metadata = "0.18"
+cargo_metadata = "0.19.2"
 anyhow = "1"
 #[patch-crates.io] #doesn't err
 #[patch.crates-io]
