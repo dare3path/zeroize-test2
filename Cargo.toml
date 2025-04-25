@@ -3,6 +3,8 @@ name = "zeroize-test2"
 description = "fail-fast from build.rs if rustls-pki-types doesn't implement zeroize::Zeroize"
 version = "0.1.0"
 edition = "2024"
+authors = [ "dare3path" ]
+license = "Apache-2.0 OR MIT"
 
 [dependencies]
 rustls-pki-types = { version = "=1.11.0", features = ["alloc", "std"] } #lacks zeroize
