@@ -87,7 +87,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .arg(&cargo_toml)
         .arg("--target-dir")
         .arg(temp_dir.join("target"))
+        //      --locked                Assert that `Cargo.lock` will remain unchanged
+        //      --offline               Run without accessing the network
+        //      --frozen                Equivalent to specifying both --locked and --offline
         .arg("--offline")
+        .arg("--locked")
         .current_dir(&temp_dir);
 
     let cmd_str=format!("{} {:?}", cmd.get_program().to_string_lossy(), cmd.get_args().collect::<Vec<_>>());
