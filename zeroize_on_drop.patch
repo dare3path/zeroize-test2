@@ -1,0 +1,266 @@
+adds zeroize-ationg on drop, to crate rustls-pki-types
+apply on commit:
+commit b59e08d49911b10c423d25bd9040cfbe5a6042ff (HEAD -> main, origin/main, origin/HEAD)
+
+https://github.com/rustls/pki-types/pull/71#issuecomment-2831629130
+
+diff --git a/src/lib.rs b/src/lib.rs
+index c95369f..50e0004 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -134,6 +134,8 @@ pub enum PrivateKeyDer<'a> {
+ #[cfg(feature = "alloc")]
+ impl zeroize::Zeroize for PrivateKeyDer<'static> {
+     fn zeroize(&mut self) {
++        #[cfg(feature="std")]
++        eprintln!("!!!! calling zeroize on PrivateKeyDer");
+         match self {
+             Self::Pkcs1(key) => key.zeroize(),
+             Self::Sec1(key) => key.zeroize(),
+@@ -142,6 +144,64 @@ impl zeroize::Zeroize for PrivateKeyDer<'static> {
+     }
+ }
+ 
++#[cfg(feature = "alloc")]
++impl zeroize::ZeroizeOnDrop for PrivateKeyDer<'static> {} // Explicit marker
++
++impl<'a> Drop for PrivateKeyDer<'a> {
++    fn drop(&mut self) {
++        //use zeroize::Zeroize;
++        match self {
++            Self::Pkcs1(key) => {
++                if let BytesInner::Owned(vec) = &mut key.0.0 {
++                    #[cfg(feature="std")]
++                    eprintln!("!!!! Dropping PrivateKeyDer::Pkcs1");
++                    //vec.zeroize();
++                    //<Vec<u8> as zeroize::Zeroize>::zeroize(vec);
++                    //zeroize::Zeroize::zeroize(vec);
++                    zeroize_vec(vec);
++                }
++            }
++            Self::Sec1(key) => {
++                if let BytesInner::Owned(vec) = &mut key.0.0 {
++                    #[cfg(feature="std")]
++                    eprintln!("!!!! Dropping PrivateKeyDer::Sec1");
++                    //vec.zeroize();
++                    //<Vec<u8> as zeroize::Zeroize>::zeroize(vec);
++                    //zeroize::Zeroize::zeroize(vec);
++                    zeroize_vec(vec);
++                }
++            }
++            Self::Pkcs8(key) => {
++                if let BytesInner::Owned(vec) = &mut key.0.0 {
++                    #[cfg(feature="std")]
++                    eprintln!("!!!! Dropping PrivateKeyDer::Pkcs8");
++                    //vec.zeroize();
++                    //<Vec<u8> as zeroize::Zeroize>::zeroize(vec);
++                    //zeroize::Zeroize::zeroize(vec);
++                    zeroize_vec(vec);
++                }
++            }
++        }
++    }
++}
++
++#[cfg(feature = "alloc")]
++fn zeroize_vec(vec: &mut Vec<u8>) {
++    // Check if non-zero before
++    #[cfg(feature="std")] {
++    let has_non_zero = vec.iter().any(|&b| b != 0);
++    eprintln!("Zeroizing Vec<u8>, has non-zero bytes: {}", has_non_zero);
++    }
++    zeroize::Zeroize::zeroize(vec);
++    // Verify all zeros after
++    #[cfg(feature="std")] {
++    let is_all_zeros = vec.iter().all(|&b| b == 0);
++    eprintln!("After zeroize, Vec<u8> is all zeros: {}", is_all_zeros);
++    }
++}
++
++
++
+ impl PrivateKeyDer<'_> {
+     /// Clone the private key to a `'static` value
+     #[cfg(feature = "alloc")]
+@@ -283,10 +343,19 @@ impl TryFrom<Vec<u8>> for PrivateKeyDer<'_> {
+     type Error = &'static str;
+ 
+     fn try_from(key: Vec<u8>) -> Result<Self, Self::Error> {
+-        Ok(match PrivateKeyDer::try_from(&key[..])? {
+-            PrivateKeyDer::Pkcs1(_) => Self::Pkcs1(key.into()),
+-            PrivateKeyDer::Sec1(_) => Self::Sec1(key.into()),
+-            PrivateKeyDer::Pkcs8(_) => Self::Pkcs8(key.into()),
++        let variant = {
++            let result = PrivateKeyDer::try_from(&key[..])?;
++            match result {
++                PrivateKeyDer::Pkcs1(_) => 0,
++                PrivateKeyDer::Sec1(_) => 1,
++                PrivateKeyDer::Pkcs8(_) => 2,
++            }
++        };
++        Ok(match variant {
++            0 => Self::Pkcs1(key.into()),
++            1 => Self::Sec1(key.into()),
++            2 => Self::Pkcs8(key.into()),
++            _ => unreachable!(),
+         })
+     }
+ }
+@@ -327,10 +396,26 @@ impl PrivatePkcs1KeyDer<'_> {
+ #[cfg(feature = "alloc")]
+ impl zeroize::Zeroize for PrivatePkcs1KeyDer<'static> {
+     fn zeroize(&mut self) {
++        #[cfg(feature="std")]
++        eprintln!("!!!! calling zeroize on PrivatePkcs1KeyDer");
+         self.0.0.zeroize()
+     }
+ }
+ 
++#[cfg(feature = "alloc")]
++impl zeroize::ZeroizeOnDrop for PrivatePkcs1KeyDer<'static> {} // Explicit marker
++
++#[cfg(feature = "alloc")]
++impl<'a> Drop for PrivatePkcs1KeyDer<'a> {
++    fn drop(&mut self) {
++        if let BytesInner::Owned(vec) = &mut self.0.0 {
++            #[cfg(feature="std")]
++            eprintln!("!!!! Dropping PrivatePkcs1KeyDer");
++            zeroize_vec(vec);
++        }
++    }
++}
++
+ #[cfg(feature = "alloc")]
+ impl PemObjectFilter for PrivatePkcs1KeyDer<'static> {
+     const KIND: SectionKind = SectionKind::RsaPrivateKey;
+@@ -394,10 +479,26 @@ impl PrivateSec1KeyDer<'_> {
+ #[cfg(feature = "alloc")]
+ impl zeroize::Zeroize for PrivateSec1KeyDer<'static> {
+     fn zeroize(&mut self) {
++        #[cfg(feature="std")]
++        eprintln!("!!!! calling zeroize on PrivateSec1KeyDer");
+         self.0.0.zeroize()
+     }
+ }
+ 
++#[cfg(feature = "alloc")]
++impl zeroize::ZeroizeOnDrop for PrivateSec1KeyDer<'static> {} // Explicit marker
++
++#[cfg(feature = "alloc")]
++impl<'a> Drop for PrivateSec1KeyDer<'a> {
++    fn drop(&mut self) {
++        if let BytesInner::Owned(vec) = &mut self.0.0 {
++            #[cfg(feature="std")]
++            eprintln!("!!!! Dropping PrivateSec1KeyDer");
++            zeroize_vec(vec);
++        }
++    }
++}
++
+ #[cfg(feature = "alloc")]
+ impl PemObjectFilter for PrivateSec1KeyDer<'static> {
+     const KIND: SectionKind = SectionKind::EcPrivateKey;
+@@ -462,10 +563,29 @@ impl PrivatePkcs8KeyDer<'_> {
+ #[cfg(feature = "alloc")]
+ impl zeroize::Zeroize for PrivatePkcs8KeyDer<'static> {
+     fn zeroize(&mut self) {
++        #[cfg(feature="std")]
++        eprintln!("!!!! calling zeroize on PrivatePkcs8KeyDer");
+         self.0.0.zeroize()
+     }
+ }
+ 
++#[cfg(feature = "alloc")]
++impl zeroize::ZeroizeOnDrop for PrivatePkcs8KeyDer<'static> {} // Explicit marker
++
++#[cfg(feature = "alloc")]
++impl<'a> Drop for PrivatePkcs8KeyDer<'a> {
++    fn drop(&mut self) {
++        #[cfg(feature="std")]
++        eprintln!("!!!! Dropping PrivatePkcs8KeyDer");
++        if let BytesInner::Owned(vec) = &mut self.0.0 {
++            #[cfg(feature="std")]
++            eprintln!("!!!! zeroing PrivatePkcs8KeyDer");
++            //zeroize::Zeroize::zeroize(vec);
++            zeroize_vec(vec);
++        }
++    }
++}
++
+ #[cfg(feature = "alloc")]
+ impl PemObjectFilter for PrivatePkcs8KeyDer<'static> {
+     const KIND: SectionKind = SectionKind::PrivateKey;
+@@ -1027,8 +1147,17 @@ enum BytesInner<'a> {
+ #[cfg(feature = "alloc")]
+ impl BytesInner<'_> {
+     fn into_owned(self) -> BytesInner<'static> {
++//        BytesInner::Owned(match self {
++//            Self::Owned(vec) => vec, // original line, won't work due to our Drop impl.
++//            Self::Borrowed(slice) => slice.to_vec(),
++//        })
+         BytesInner::Owned(match self {
+-            Self::Owned(vec) => vec,
++            Self::Owned(ref vec) => {
++                #[cfg(feature="std")]
++                eprintln!("!!! making a BytesInner's vec clone.");
++                //FIXME: need a better way
++                vec.clone()
++            },
+             Self::Borrowed(slice) => slice.to_vec(),
+         })
+     }
+@@ -1038,12 +1167,36 @@ impl BytesInner<'_> {
+ impl zeroize::Zeroize for BytesInner<'static> {
+     fn zeroize(&mut self) {
+         match self {
+-            BytesInner::Owned(vec) => vec.zeroize(),
+-            BytesInner::Borrowed(_) => (),
++            BytesInner::Owned(vec) => {
++                #[cfg(feature="std")]
++                eprintln!("!!!! calling zeroize on BytesInner::Owned");
++                vec.zeroize()
++            },
++            BytesInner::Borrowed(_) => {
++                #[cfg(feature="std")]
++                eprintln!("!!!! NOT calling zeroize on BytesInner::Borrowed");
++                ()
++            },
+         }
+     }
+ }
+ 
++#[cfg(feature = "alloc")]
++impl zeroize::ZeroizeOnDrop for BytesInner<'static> {} // Explicit marker
++
++#[cfg(feature = "alloc")]
++impl<'a> Drop for BytesInner<'a> {
++    fn drop(&mut self) {
++        //zeroize::Zeroize::zeroize(self);// won't work due to lifetimes
++        if let BytesInner::Owned(vec) = self {
++            #[cfg(feature="std")]
++            eprintln!("!!!! Dropping BytesInner");
++            zeroize_vec(vec);
++        }
++    }
++}
++
++
+ impl AsRef<[u8]> for BytesInner<'_> {
+     fn as_ref(&self) -> &[u8] {
+         match &self {
+@@ -1118,4 +1271,15 @@ mod tests {
+         assert_ne!(owned_a, borrowed_b);
+         assert_ne!(borrowed_b, owned_a);
+     }
++
++}
++
++#[test]
++fn test_zeroize() {
++    const fn assert_zeroize<T: zeroize::Zeroize + zeroize::ZeroizeOnDrop>() {}
++    assert_zeroize::<PrivatePkcs8KeyDer<'static>>();
++    assert_zeroize::<PrivateKeyDer<'static>>();
++    assert_zeroize::<PrivatePkcs1KeyDer<'static>>();
++    assert_zeroize::<PrivateSec1KeyDer<'static>>();
++    assert_zeroize::<BytesInner<'static>>();
+ }

@@ -12,4 +12,4 @@ fi
 set -xe
 cargo build --offline --locked
 cargo run --offline --locked
-cargo test --offline --locked
+cargo test --offline --locked -- --nocapture

@@ -28,7 +28,9 @@ macro_rules! assert_has_zeroize {
     ($t:ty) => {
         const _: () = {
             #[allow(dead_code)]
-            const fn check_has_zeroize<T: zeroize::Zeroize>() {}
+            const fn check_has_zeroize<T: zeroize::Zeroize
+//                + zeroize::ZeroizeOnDrop
+                >() {}
             check_has_zeroize::<$t>();
         };
 //        #[cfg(no_rustls_pki_types_zeroize)]
@@ -130,13 +132,18 @@ mod tests {
 //        let mut key = PrivateKeyDer::Pkcs8(keys.pop().unwrap());
 //        key.zeroize(); // Should compile if Zeroize is implemented
         // Test Zeroize on PrivatePkcs8KeyDer
-        let mut pkcs8_key = keys[0].clone_key(); // Clone to avoid moving
-        pkcs8_key.zeroize();
+        eprintln!("before drop");
+        {
+            let _pkcs8_key:PrivatePkcs8KeyDer<> = keys[0].clone_key();
+        } // XXX: does drop() zeroize it? apparently not, even if ZeroizeOnDrop trait is impl for it!
+        eprintln!("after drop");
 
         // Test Zeroize on PrivateKeyDer
         //let mut key = PrivateKeyDer::Pkcs8(keys.into_iter().next().unwrap());
         let mut key = PrivateKeyDer::Pkcs8(keys.pop().unwrap());
+        eprintln!("before manual zeroize");
         key.zeroize();
+        eprintln!("after manual zeroize");
 
 
         // Zeroize pem_data

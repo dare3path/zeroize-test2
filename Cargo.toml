@@ -30,3 +30,5 @@ anyhow = "1"
 #XXX: uncomment this to get the zeroize variant of pki-types; comment out to see build fail due to lack of it in 1.11.0
 [patch.crates-io]
 rustls-pki-types = { git = "https://github.com/rustls/pki-types.git", rev = "b59e08d49911b10c423d25bd9040cfbe5a6042ff" }
+#rustls-pki-types = { path = "/home/user/SOURCE/github/pki-types" } #patched with ./zeroize_on_drop.patch
+
