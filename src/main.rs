@@ -29,7 +29,7 @@ macro_rules! assert_has_zeroize {
         const _: () = {
             #[allow(dead_code)]
             const fn check_has_zeroize<T: zeroize::Zeroize
-//                + zeroize::ZeroizeOnDrop
+                + zeroize::ZeroizeOnDrop
                 >() {}
             check_has_zeroize::<$t>();
         };
@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn test_zeroize_integration() {
-        fn assert_zeroize1<T: zeroize::Zeroize>() {}
+        fn assert_zeroize1<T: zeroize::Zeroize + zeroize::ZeroizeOnDrop>() {}
         assert_zeroize1::<rustls_pki_types::PrivatePkcs8KeyDer<'static>>();
         assert_zeroize1::<rustls_pki_types::PrivateKeyDer<'static>>();
     }

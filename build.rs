@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Write test program
     let test_code = r#"
         #[allow(dead_code)]
-        const fn assert_rustls_pki_types_zeroize<T: zeroize::Zeroize>() {}
+        const fn assert_rustls_pki_types_zeroize<T: zeroize::Zeroize + zeroize::ZeroizeOnDrop>() {}
         const _: () = {
             assert_rustls_pki_types_zeroize::<rustls_pki_types::PrivatePkcs8KeyDer<'static>>();
             assert_rustls_pki_types_zeroize::<rustls_pki_types::PrivateKeyDer<'static>>();
@@ -116,17 +116,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("cargo build succeeded, setting cfg {}", CFG_RUSTLS_PKI_TYPES_ZEROIZE);
         println!("cargo:rustc-cfg={}", CFG_RUSTLS_PKI_TYPES_ZEROIZE);
     } else {
-        if stderr.contains ("error[E0277]: the trait bound `") && 
-           stderr.contains(": Zeroize` is not satisfied") && 
-           stderr.contains("the trait `DefaultIsZeroes` is not implemented for `") {
+        if stderr.contains ("error[E0277]: the trait bound `")
+           && (stderr.contains(": Zeroize` is not satisfied") 
+                || stderr.contains(": ZeroizeOnDrop` is not satisfied"))
+           && (stderr.contains("the trait `DefaultIsZeroes` is not implemented for `")
+                || stderr.contains("the trait `ZeroizeOnDrop` is not implemented for `"))
+        {
              //eprintln!("cargo build failed with the expected Zeroize error");
                panic!(
                    "{}",
 "!!!!!!!!!!!
-The crate 'rustls-pki-types' does not implement zeroize::Zeroize for a few things like PrivatePkcs8KeyDer<'static>.
+The crate 'rustls-pki-types' does not implement zeroize::Zeroize and/or zeroize::ZeroizeOnDrop for things like PrivatePkcs8KeyDer<'static>.
 Try bumping to version >= 1.12.0 or use this:
 [patch.crates-io]
 rustls-pki-types = { git = \"https://github.com/rustls/pki-types.git\", rev = \"b59e08d49911b10c423d25bd9040cfbe5a6042ff\" }
+Actually that doesn't have ZeroizeOnDrop, so try patching the cloned pki-types repo with this patch:
+./zeroize_on_drop.patch
+then set that path to it in Cargo.toml 's [patch.crates-io] section.
 !!!!!!!!!!!"
              );
          } else {

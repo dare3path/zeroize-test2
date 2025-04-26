@@ -7,6 +7,7 @@ authors = [ "dare3path" ]
 license = "Apache-2.0 OR MIT"
 
 [dependencies]
+#This has no zeroize:
 rustls-pki-types = { version = "=1.11.0", features = ["alloc", "std"] } #lacks zeroize
 #rustls-pki-types = {  git = "https://github.com/rustls/pki-types.git", rev="b59e08d49911b10c423d25bd9040cfbe5a6042ff", features = ["alloc", "std"] } #has zeroize
 zeroize = { version = "1.8", features = ["alloc"] }
@@ -29,6 +30,9 @@ anyhow = "1"
 
 #XXX: uncomment this to get the zeroize variant of pki-types; comment out to see build fail due to lack of it in 1.11.0
 [patch.crates-io]
+#This has Zeroize impl but not ZeroizeOnDrop:
 rustls-pki-types = { git = "https://github.com/rustls/pki-types.git", rev = "b59e08d49911b10c423d25bd9040cfbe5a6042ff" }
+
+#This has both if you applied ./zeroize_on_drop.patch:
 #rustls-pki-types = { path = "/home/user/SOURCE/github/pki-types" } #patched with ./zeroize_on_drop.patch
 
