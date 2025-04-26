@@ -1,4 +1,4 @@
-adds zeroize-ationg on drop, to crate rustls-pki-types
+adds zeroize-ation on drop, to crate rustls-pki-types
 apply on commit:
 commit b59e08d49911b10c423d25bd9040cfbe5a6042ff (HEAD -> main, origin/main, origin/HEAD)
 
