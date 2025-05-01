@@ -4,6 +4,7 @@ commit b59e08d49911b10c423d25bd9040cfbe5a6042ff (HEAD -> main, origin/main, orig
 
 first try was on: https://github.com/rustls/pki-types/pull/71#issuecomment-2831629130
 this patch is also here: https://github.com/dare3path/pki-types/tree/zeroize_on_drop
+it's likely more up to date / updated on that ^ branch.
 
 diff --git a/Cargo.toml b/Cargo.toml
 index 4dbc6d1..8004728 100644
