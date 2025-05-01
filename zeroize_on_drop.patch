@@ -18,7 +18,7 @@ index 4dbc6d1..8004728 100644
  [dependencies]
  zeroize = { version = "1", optional = true }
 diff --git a/src/lib.rs b/src/lib.rs
-index c95369f..e01d15e 100644
+index c95369f..3938623 100644
 --- a/src/lib.rs
 +++ b/src/lib.rs
 @@ -131,9 +131,29 @@ pub enum PrivateKeyDer<'a> {
@@ -51,13 +51,14 @@ index c95369f..e01d15e 100644
          match self {
              Self::Pkcs1(key) => key.zeroize(),
              Self::Sec1(key) => key.zeroize(),
-@@ -142,6 +162,76 @@ impl zeroize::Zeroize for PrivateKeyDer<'static> {
+@@ -142,6 +162,81 @@ impl zeroize::Zeroize for PrivateKeyDer<'static> {
      }
  }
  
 +#[cfg(feature = "alloc")]
 +impl zeroize::ZeroizeOnDrop for PrivateKeyDer<'static> {} // Explicit marker
 +
++#[cfg(feature = "alloc")]
 +impl<'a> Drop for PrivateKeyDer<'a> {
 +    fn drop(&mut self) {
 +        //use zeroize::Zeroize;
@@ -107,6 +108,10 @@ index c95369f..e01d15e 100644
 +
 +#[cfg(feature = "alloc")]
 +fn zeroize_vec(vec: &mut Vec<u8>) {
++    #[cfg(feature="trace_drop_and_zeroize")]
++    if vec.len()==0 {
++        trace_log!("!!!!!! vector is empty, nothing to zeroize");
++    }
 +    // Check if non-zero before
 +    #[cfg(feature="trace_drop_and_zeroize")]
 +    let was_non_zero = vec.iter().any(|&b| b != 0);
@@ -128,7 +133,7 @@ index c95369f..e01d15e 100644
  impl PrivateKeyDer<'_> {
      /// Clone the private key to a `'static` value
      #[cfg(feature = "alloc")]
-@@ -283,10 +373,19 @@ impl TryFrom<Vec<u8>> for PrivateKeyDer<'_> {
+@@ -283,10 +378,19 @@ impl TryFrom<Vec<u8>> for PrivateKeyDer<'_> {
      type Error = &'static str;
  
      fn try_from(key: Vec<u8>) -> Result<Self, Self::Error> {
@@ -152,7 +157,7 @@ index c95369f..e01d15e 100644
          })
      }
  }
-@@ -327,10 +426,28 @@ impl PrivatePkcs1KeyDer<'_> {
+@@ -327,10 +431,28 @@ impl PrivatePkcs1KeyDer<'_> {
  #[cfg(feature = "alloc")]
  impl zeroize::Zeroize for PrivatePkcs1KeyDer<'static> {
      fn zeroize(&mut self) {
@@ -181,7 +186,7 @@ index c95369f..e01d15e 100644
  #[cfg(feature = "alloc")]
  impl PemObjectFilter for PrivatePkcs1KeyDer<'static> {
      const KIND: SectionKind = SectionKind::RsaPrivateKey;
-@@ -394,10 +511,28 @@ impl PrivateSec1KeyDer<'_> {
+@@ -394,10 +516,28 @@ impl PrivateSec1KeyDer<'_> {
  #[cfg(feature = "alloc")]
  impl zeroize::Zeroize for PrivateSec1KeyDer<'static> {
      fn zeroize(&mut self) {
@@ -210,7 +215,7 @@ index c95369f..e01d15e 100644
  #[cfg(feature = "alloc")]
  impl PemObjectFilter for PrivateSec1KeyDer<'static> {
      const KIND: SectionKind = SectionKind::EcPrivateKey;
-@@ -462,10 +597,29 @@ impl PrivatePkcs8KeyDer<'_> {
+@@ -462,10 +602,29 @@ impl PrivatePkcs8KeyDer<'_> {
  #[cfg(feature = "alloc")]
  impl zeroize::Zeroize for PrivatePkcs8KeyDer<'static> {
      fn zeroize(&mut self) {
@@ -240,7 +245,7 @@ index c95369f..e01d15e 100644
  #[cfg(feature = "alloc")]
  impl PemObjectFilter for PrivatePkcs8KeyDer<'static> {
      const KIND: SectionKind = SectionKind::PrivateKey;
-@@ -1027,8 +1181,16 @@ enum BytesInner<'a> {
+@@ -1027,8 +1186,16 @@ enum BytesInner<'a> {
  #[cfg(feature = "alloc")]
  impl BytesInner<'_> {
      fn into_owned(self) -> BytesInner<'static> {
@@ -258,7 +263,7 @@ index c95369f..e01d15e 100644
              Self::Borrowed(slice) => slice.to_vec(),
          })
      }
-@@ -1038,12 +1200,37 @@ impl BytesInner<'_> {
+@@ -1038,12 +1205,37 @@ impl BytesInner<'_> {
  impl zeroize::Zeroize for BytesInner<'static> {
      fn zeroize(&mut self) {
          match self {
@@ -272,10 +277,10 @@ index c95369f..e01d15e 100644
 +                trace_log!("!!!! manually but NOT calling zeroize on BytesInner::Borrowed");
 +                ()
 +            },
-         }
-     }
- }
- 
++        }
++    }
++}
++
 +#[cfg(feature = "alloc")]
 +impl zeroize::ZeroizeOnDrop for BytesInner<'static> {} // Explicit marker
 +
@@ -289,16 +294,16 @@ index c95369f..e01d15e 100644
 +            zeroize_vec(vec);
 +        } else {
 +            trace_log!("!!!!! in drop, won't zeroize BytesInner's borrowed vec");
-+        }
+         }
 +        trace_log!("!!!! done dropping BytesInner");
-+    }
-+}
-+
+     }
+ }
+ 
 +
  impl AsRef<[u8]> for BytesInner<'_> {
      fn as_ref(&self) -> &[u8] {
          match &self {
-@@ -1073,6 +1260,7 @@ fn hex<'a>(f: &mut fmt::Formatter<'_>, payload: impl IntoIterator<Item = &'a u8>
+@@ -1073,6 +1265,7 @@ fn hex<'a>(f: &mut fmt::Formatter<'_>, payload: impl IntoIterator<Item = &'a u8>
      Ok(())
  }
  
@@ -306,7 +311,7 @@ index c95369f..e01d15e 100644
  #[cfg(all(test, feature = "std"))]
  mod tests {
      use super::*;
-@@ -1118,4 +1306,99 @@ mod tests {
+@@ -1118,4 +1311,107 @@ mod tests {
          assert_ne!(owned_a, borrowed_b);
          assert_ne!(borrowed_b, owned_a);
      }
@@ -405,5 +410,13 @@ index c95369f..e01d15e 100644
 +        }
 +        // Drop happens via Drop impl, not Zeroize
 +        trace_log!("Non-'static BytesInner dropped, should zero Owned data");
++    }
++    #[test]
++    #[cfg(feature = "alloc")]
++    fn test_empty_vec_zeroize() {
++        {
++            let vec:Vec<u8>=vec![];
++            let _bytes_inner = BytesInner::Owned(vec);
++        }
 +    }
 +}//mod tests
